@@ -2,6 +2,9 @@
 #include <iphlpapi.h>
 #include <stdio.h>
 
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "WS2_32.lib")
+
 #define MODNAME_LENGTH 64
 
 void get_tcp_info(void)
@@ -20,6 +23,7 @@ void get_tcp_info(void)
 
     struct in_addr IpAddr;
     int i;
+    int charcount;
 
     GetExtendedTcpTable(NULL, &dwSize, TRUE, AF_INET, TCP_TABLE_OWNER_MODULE_ALL, 0);
     pTcpTable = (PMIB_TCPTABLE_OWNER_MODULE) calloc(dwSize,1);
@@ -36,7 +40,7 @@ void get_tcp_info(void)
         return;
     }
         
-    printf(" %d rows", (int) pTcpTable->dwNumEntries);
+    printf(" %d rows\n", (int) pTcpTable->dwNumEntries);
     printf(" Proto  Local Address            Foreign Address          State         PID            Module Name\n");
     
     for (i = 0; i < (int) pTcpTable->dwNumEntries; i++) {
@@ -47,43 +51,43 @@ void get_tcp_info(void)
 
         switch (pTcpTable->table[i].dwState) {
         case MIB_TCP_STATE_CLOSED:
-            strcpy(state,"CLOSED");
+            strcpy_s(state, 16,"CLOSED");
             break;
         case MIB_TCP_STATE_LISTEN:
-            strcpy(state,"LISTEN");
+            strcpy_s(state, 16,"LISTEN");
             break;
         case MIB_TCP_STATE_SYN_SENT:
-            strcpy(state,"SYN-SENT");
+            strcpy_s(state, 16,"SYN-SENT");
             break;
         case MIB_TCP_STATE_SYN_RCVD:
-            strcpy(state,"SYN-RECEIVED");
+            strcpy_s(state, 16,"SYN-RECEIVED");
             break;
         case MIB_TCP_STATE_ESTAB:
-            strcpy(state,"ESTABLISHED");
+            strcpy_s(state, 16,"ESTABLISHED");
             break;
         case MIB_TCP_STATE_FIN_WAIT1:
-            strcpy(state,"FIN-WAIT-1");
+            strcpy_s(state, 16,"FIN-WAIT-1");
             break;
         case MIB_TCP_STATE_FIN_WAIT2:
-            strcpy(state,"FIN-WAIT-2");
+            strcpy_s(state, 16,"FIN-WAIT-2");
             break;
         case MIB_TCP_STATE_CLOSE_WAIT:
-            strcpy(state,"CLOSE-WAIT");
+            strcpy_s(state, 16,"CLOSE-WAIT");
             break;
         case MIB_TCP_STATE_CLOSING:
-            strcpy(state,"CLOSING");
+            strcpy_s(state, 16,"CLOSING");
             break;
         case MIB_TCP_STATE_LAST_ACK:
-            strcpy(state,"LAST-ACK");
+            strcpy_s(state, 16,"LAST-ACK");
             break;
         case MIB_TCP_STATE_TIME_WAIT:
-            strcpy(state,"TIME-WAIT");
+            strcpy_s(state, 16,"TIME-WAIT");
             break;
         case MIB_TCP_STATE_DELETE_TCB:
-            strcpy(state,"DELETE-TCB");
+            strcpy_s(state, 16,"DELETE-TCB");
             break;
         default:
-            strcpy(state,"UNKNOWN");
+            strcpy_s(state, 16,"UNKNOWN");
             break;
         }
 
@@ -96,7 +100,7 @@ void get_tcp_info(void)
         {
             if (NO_ERROR == GetOwnerModuleFromTcpEntry(&(pTcpTable->table[i]), TCPIP_OWNER_MODULE_INFO_BASIC, modInfo, &dwSize))
             {
-                wcstombs(modName, modInfo->pModuleName, MODNAME_LENGTH-1);
+                wcstombs_s(&charcount, modName, MODNAME_LENGTH, modInfo->pModuleName, MODNAME_LENGTH);
             }
         }
         else
@@ -105,8 +109,8 @@ void get_tcp_info(void)
         }
         if (modInfo) { free(modInfo); modInfo = NULL; }
         
-        sprintf(localInfo, "%s:%d",  szLocalAddr, ntohs((u_short)pTcpTable->table[i].dwLocalPort));
-        sprintf(remoteInfo, "%s:%d", szRemoteAddr,ntohs((u_short)pTcpTable->table[i].dwRemotePort));
+        sprintf_s(localInfo, 32, "%s:%d",  szLocalAddr, ntohs((u_short)pTcpTable->table[i].dwLocalPort));
+        sprintf_s(remoteInfo, 32, "%s:%d", szRemoteAddr,ntohs((u_short)pTcpTable->table[i].dwRemotePort));
         printf(" TCP    %-23s  %-23s  %-12s  %-12d   %s\n",localInfo,remoteInfo,state,pTcpTable->table[i].dwOwningPid, modName);
     }
     
@@ -129,6 +133,7 @@ void get_udp_info(void)
 
     struct in_addr IpAddr;
     int i;
+    int charcount;
 
     GetExtendedUdpTable(NULL, &dwSize, TRUE, AF_INET, UDP_TABLE_OWNER_MODULE, 0);
     pUdpTable = (PMIB_UDPTABLE_OWNER_MODULE) calloc(dwSize,1);
@@ -161,7 +166,7 @@ void get_udp_info(void)
         {
             if (NO_ERROR == GetOwnerModuleFromUdpEntry(&(pUdpTable->table[i]), TCPIP_OWNER_MODULE_INFO_BASIC, modInfo, &dwSize))
             {
-                wcstombs(modName, modInfo->pModuleName, MODNAME_LENGTH-1);
+                wcstombs_s(&charcount, modName, MODNAME_LENGTH, modInfo->pModuleName, MODNAME_LENGTH);
             }
         }
         else
@@ -170,7 +175,7 @@ void get_udp_info(void)
         }
         if (modInfo) { free(modInfo); modInfo = NULL; }
         
-        sprintf(localInfo, "%s:%d", szLocalAddr, ntohs((u_short)pUdpTable->table[i].dwLocalPort));
+        sprintf_s(localInfo, 32, "%s:%d", szLocalAddr, ntohs((u_short)pUdpTable->table[i].dwLocalPort));
         printf(" UDP    %-23s  %-23s  %-12s  %-12d   %s\n",localInfo,"*:*"," ",pUdpTable->table[i].dwOwningPid, modName);
     }
 
@@ -183,7 +188,7 @@ void get_udp_info(void)
 int main()
 {
     // This library is not guaranteed to be loaded and is required to list Service names when displaying module info
-    LoadLibrary("advapi32.dll");
+    LoadLibraryA("advapi32.dll");
     get_tcp_info();
     get_udp_info();
     return 0;
